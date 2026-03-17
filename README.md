@@ -39,7 +39,7 @@ npm run test:watch
 src/
 ├── app/                    # 앱 엔트리 및 라우팅
 │   ├── App.tsx             # RouterProvider 설정
-│   └── routes.tsx          # 라우트 정의 (/ → 챗봇, /admin → 백오피스)
+│   └── routes.tsx          # 라우트 정의 (/, /admin, /admin/notion, /admin/documents, /admin/settings, /admin/guide)
 ├── components/             # 공통 디자인 시스템 컴포넌트
 │   ├── Button.tsx          # primary / secondary / ghost 변형
 │   ├── Input.tsx           # 다크 테마 입력 필드
@@ -51,7 +51,8 @@ src/
 │   ├── Checkbox.tsx        # 체크박스
 │   ├── Spinner.tsx         # 로딩 스피너
 │   ├── Logo.tsx            # Twal-King 브랜드 로고 (SVG 아이콘 + 텍스트)
-│   └── Layout.tsx          # 사이드바(로고 + 네비게이션) + 상단 헤더(로그인/회원가입) + 콘텐츠 공통 레이아웃
+│   ├── HealthIndicator.tsx # 서버 헬스체크 인디케이터 (30초 자동 체크)
+│   └── Layout.tsx          # 사이드바(로고 + 네비게이션 + 헬스체크) + 상단 헤더 + 콘텐츠
 ├── domains/
 │   ├── chat/               # 챗봇 도메인
 │   │   ├── components/
@@ -68,7 +69,11 @@ src/
 │   │   └── types.ts               # Message, Source, Session, ChatState
 │   └── admin/              # 백오피스 도메인
 │       ├── components/
-│       │   ├── AdminPage.tsx          # 백오피스 메인 페이지
+│       │   ├── AdminPage.tsx          # 임베딩 관리 메인 페이지
+│       │   ├── NotionSyncPage.tsx     # Notion 워크스페이스 동기화 페이지
+│       │   ├── DocumentsPage.tsx      # 문서 관리 페이지 (상세/삭제/미리보기/이력)
+│       │   ├── SettingsPage.tsx       # 청킹 설정 페이지
+│       │   ├── GuidePage.tsx          # 임베딩 가이드 페이지
 │       │   ├── FilterBar.tsx          # 상태 필터 + 검색 + 일괄 임베딩
 │       │   ├── PageTable.tsx          # 페이지 목록 테이블
 │       │   ├── PageRow.tsx            # 개별 페이지 행
@@ -81,7 +86,11 @@ src/
 │       │   ├── useEmbedding.ts        # 개별/일괄 임베딩 요청
 │       │   ├── useBulkSelection.ts    # 체크박스 선택 관리
 │       │   ├── usePageFilter.ts       # 상태/텍스트 필터링
-│       │   └── useFileUpload.ts       # 파일 업로드 (검증, 업로드, 결과 관리)
+│       │   ├── useFileUpload.ts       # 파일 업로드 (검증, 업로드, 결과 관리)
+│       │   ├── useWorkspace.ts        # Notion 워크스페이스 조회/동기화/임포트
+│       │   ├── useDocuments.ts        # 문서 CRUD, 상세, 파이프라인 이력, 미리보기
+│       │   ├── useChunkingConfig.ts   # 청킹 설정 조회/수정
+│       │   └── useGuide.ts           # 임베딩 가이드 조회
 │       └── types.ts                   # EmbeddingStatus, NotionPage, PageFilter, AdminState
 ├── hooks/
 │   └── useApi.ts           # 범용 API 훅 (data, isLoading, error, execute)
@@ -105,15 +114,39 @@ src/
 - 로딩 인디케이터 및 에러 처리 (재시도 지원)
 - 새 메시지 자동 스크롤
 
-### 백오피스 (`/admin`)
+### 임베딩 관리 (`/admin`)
 
 - Notion 페이지 목록 조회 및 임베딩 상태 관리
 - 파일 업로드로 문서 임베딩 (드래그앤드롭, PDF/DOCX/TXT/MD, 최대 10개·50MB)
 - 임베딩 상태별 필터링 (대기, 진행 중, 완료, 실패)
-- 페이지 제목 텍스트 검색
-- 개별/일괄 임베딩 생성 요청
-- 일괄 처리 진행률 표시
-- 페이지네이션
+- 페이지 제목 텍스트 검색, 개별/일괄 임베딩, 페이지네이션
+
+### Notion 동기화 (`/admin/notion`)
+
+- Notion 워크스페이스 페이지 목록 조회
+- 체크박스 선택 후 일괄 동기화 (최대 20개)
+- Notion 페이지 UUID로 개별 임포트
+
+### 문서 관리 (`/admin/documents`)
+
+- 전체 문서 목록 (소스 타입별 필터: 파일 업로드 / Notion)
+- 문서 상세 모달 (메타데이터, 청크 목록, Notion 소스 정보)
+- 청킹 미리보기 (예상 청크 수, 품질 점수, 최적화 제안)
+- 파이프라인 처리 이력 조회
+- 문서 삭제
+
+### 청킹 설정 (`/admin/settings`)
+
+- 청킹 설정 조회/수정 (maxTokens 100~2000, overlapTokens ≤ 50%)
+
+### 임베딩 가이드 (`/admin/guide`)
+
+- 지원 파일 형식, 권장 문서 구조, 최적화 팁, 안티패턴 표시
+
+### 공통
+
+- 사이드바 하단 서버 헬스체크 인디케이터 (30초 자동 체크)
+- 상단 헤더 로그인/회원가입 버튼 (UI만, 인증 미연결)
 
 ## 디자인 시스템
 

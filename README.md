@@ -63,8 +63,8 @@ src/
 │   │   │   ├── ChatInput.tsx      # 메시지 입력 + 전송
 │   │   │   └── SourceLink.tsx     # Notion 출처 링크
 │   │   ├── hooks/
-│   │   │   ├── useChat.ts         # 메시지 전송/수신, 로딩/에러 관리
-│   │   │   ├── useSessions.ts     # 세션 CRUD, 세션 전환
+│   │   │   ├── useChat.ts         # 메시지 전송/수신, 세션별 히스토리 로드, 로딩/에러 관리
+│   │   │   ├── useSessions.ts     # 세션 CRUD (서버 연동), 세션 전환, optimistic update
 │   │   │   └── useAutoScroll.ts   # 새 메시지 자동 스크롤
 │   │   └── types.ts               # Message, Source, Session, ChatState
 │   └── admin/              # 백오피스 도메인
@@ -109,7 +109,10 @@ src/
 ### 챗봇 인터페이스 (`/`)
 
 - 자연어 질문으로 Notion 페이지 콘텐츠 검색
-- 대화 세션 관리 (생성, 전환, 이력 조회)
+- 대화 세션 관리 (서버 연동: 생성, 전환, 삭제)
+- 세션 전환 시 서버에서 메시지 히스토리 자동 로드
+- 세션 없이 메시지 전송 시 자동 세션 생성
+- 세션 삭제 (hover 시 ✕ 버튼, optimistic update)
 - AI 응답에 Notion 출처 링크 표시
 - 로딩 인디케이터 및 에러 처리 (재시도 지원)
 - 새 메시지 자동 스크롤
@@ -165,6 +168,11 @@ src/
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
+| POST | `/api/v1/search` | 챗봇 자연어 검색 |
+| GET | `/api/v1/sessions` | 대화 세션 목록 조회 |
+| POST | `/api/v1/sessions` | 새 대화 세션 생성 |
+| GET | `/api/v1/sessions/{id}/messages` | 세션별 메시지 히스토리 조회 |
+| DELETE | `/api/v1/sessions/{id}` | 대화 세션 삭제 |
 | GET | `/api/v1/health` | 서비스 헬스 체크 |
 | GET | `/api/v1/notion/pages` | Notion 연동 문서 목록 (필터/페이지네이션) |
 | POST | `/api/v1/notion/pages` | Notion 페이지 임포트 |
@@ -181,7 +189,7 @@ src/
 | PUT | `/api/v1/chunking-config` | 청킹 설정 변경 |
 | GET | `/api/v1/guide` | 임베딩 가이드 정보 |
 
-챗봇 검색 API (`/search`, `/sessions`)는 별도 서비스로 제공 예정.
+챗봇 API와 관리 API 모두 `/api/v1` 프리픽스를 사용합니다.
 
 ## 테스트
 

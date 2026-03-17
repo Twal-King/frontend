@@ -74,7 +74,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  // --- Chat (별도 서비스, 기존 유지) ---
+  // --- Chat ---
   search(data: SearchRequest) {
     return request<SearchResponse>('/search', {
       method: 'POST',
@@ -84,6 +84,23 @@ export const api = {
 
   getSessions() {
     return request<SessionListResponse>('/sessions');
+  },
+
+  createSession(title?: string) {
+    return request<ApiResponse<{ session: Session }>>('/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ title: title ?? '새 대화' }),
+    });
+  },
+
+  getSessionMessages(sessionId: string) {
+    return request<ApiResponse<{ messages: Message[] }>>(`/sessions/${sessionId}/messages`);
+  },
+
+  deleteSession(sessionId: string) {
+    return request<ApiResponse<{ message: string }>>(`/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
   },
 
   // --- Health ---

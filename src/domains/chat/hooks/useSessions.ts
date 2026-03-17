@@ -24,18 +24,49 @@ export function useSessions() {
     }
   }, []);
 
-  const createSession = useCallback(() => {
+  const createSession = useCallback(async () => {
     const now = new Date().toISOString();
-    const newSession: Session = {
+    const optimisticSession: Session = {
       id: crypto.randomUUID(),
       title: '새 대화',
       createdAt: now,
       updatedAt: now,
     };
-    setSessions((prev) => [newSession, ...prev]);
-    setActiveSessionId(newSession.id);
-    return newSession;
+
+    // Optimistic update
+    setSessions((prev) => [optimisticSession, ...prev]);
+    setActiveSessionId(optimisticSession.id);
+
+    try {
+      const res = await api.createSession('새 대화');
+      const serverSession = res.data.session;
+      // Replace optimistic session with server session
+      setSessions((prev) =>
+        prev.map((s) => (s.id === optimisticSession.id ? serverSession : s)),
+      );
+      setActiveSessionId(serverSession.id);
+      return serverSession;
+    } catch {
+      // Keep optimistic session on failure (works offline)
+      return optimisticSession;
+    }
   }, []);
+
+  const deleteSession = useCallback(
+    async (sessionId: string) => {
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null);
+      }
+      try {
+        await api.deleteSession(sessionId);
+      } catch {
+        // Refetch to restore if delete failed
+        fetchSessions();
+      }
+    },
+    [activeSessionId, fetchSessions],
+  );
 
   const switchSession = useCallback((sessionId: string) => {
     setActiveSessionId(sessionId);
@@ -53,5 +84,6 @@ export function useSessions() {
     fetchSessions,
     createSession,
     switchSession,
+    deleteSession,
   } as const;
 }

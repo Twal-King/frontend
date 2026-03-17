@@ -6,6 +6,7 @@ export interface SessionSidebarProps {
   activeSessionId: string | null;
   onNewSession: () => void;
   onSelectSession: (sessionId: string) => void;
+  onDeleteSession?: (sessionId: string) => void;
 }
 
 type DateGroup = '오늘' | '어제' | '이전';
@@ -43,6 +44,7 @@ export function SessionSidebar({
   activeSessionId,
   onNewSession,
   onSelectSession,
+  onDeleteSession,
 }: SessionSidebarProps) {
   const grouped = groupSessionsByDate(sessions);
 
@@ -68,18 +70,33 @@ export function SessionSidebar({
             <ul>
               {groupSessions.map((session) => (
                 <li key={session.id}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSession(session.id)}
-                    className={cn(
-                      'w-full text-left px-3 py-2 rounded-xl text-sm transition-colors truncate',
-                      session.id === activeSessionId
-                        ? 'bg-hover text-primary'
-                        : 'text-secondary hover:bg-hover hover:text-primary'
+                  <div className="group flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => onSelectSession(session.id)}
+                      className={cn(
+                        'flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors truncate',
+                        session.id === activeSessionId
+                          ? 'bg-hover text-primary'
+                          : 'text-secondary hover:bg-hover hover:text-primary'
+                      )}
+                    >
+                      {session.title}
+                    </button>
+                    {onDeleteSession && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteSession(session.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 shrink-0 px-1.5 py-1 text-secondary hover:text-error transition-all text-xs"
+                        aria-label={`${session.title} 삭제`}
+                      >
+                        ✕
+                      </button>
                     )}
-                  >
-                    {session.title}
-                  </button>
+                  </div>
                 </li>
               ))}
             </ul>

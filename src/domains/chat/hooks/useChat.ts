@@ -1,11 +1,47 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { api } from '../../../utils/api';
 import type { Message } from '../types';
 
 export function useChat(activeSessionId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load message history when session changes
+  useEffect(() => {
+    if (!activeSessionId) {
+      setMessages([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadHistory() {
+      setIsLoadingHistory(true);
+      setError(null);
+      try {
+        const res = await api.getSessionMessages(activeSessionId!);
+        if (!cancelled) {
+          setMessages(res.data.messages);
+        }
+      } catch {
+        if (!cancelled) {
+          // Session might be new (no server-side history yet)
+          setMessages([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingHistory(false);
+        }
+      }
+    }
+
+    loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSessionId]);
 
   const sendMessage = useCallback(
     async (query: string) => {
@@ -48,7 +84,6 @@ export function useChat(activeSessionId: string | null) {
   const retry = useCallback(() => {
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
     if (lastUserMsg) {
-      // Remove the failed attempt's user message and resend
       setMessages((prev) => prev.filter((m) => m.id !== lastUserMsg.id));
       sendMessage(lastUserMsg.content);
     }
@@ -57,6 +92,7 @@ export function useChat(activeSessionId: string | null) {
   return {
     messages,
     isLoading,
+    isLoadingHistory,
     error,
     sendMessage,
     clearMessages,

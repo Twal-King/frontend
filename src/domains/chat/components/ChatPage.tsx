@@ -4,6 +4,7 @@ import { useAutoScroll } from '../hooks/useAutoScroll';
 import { SessionSidebar } from './SessionSidebar';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
+import { Spinner } from '@/components/Spinner';
 
 export function ChatPage() {
   const {
@@ -11,21 +12,34 @@ export function ChatPage() {
     activeSessionId,
     createSession,
     switchSession,
+    deleteSession,
   } = useSessions();
 
-  const { messages, isLoading, error, sendMessage, clearMessages, retry } =
+  const { messages, isLoading, isLoadingHistory, error, sendMessage, clearMessages, retry } =
     useChat(activeSessionId);
 
   const { bottomRef } = useAutoScroll([messages]);
 
-  const handleNewSession = () => {
-    createSession();
+  const handleNewSession = async () => {
     clearMessages();
+    await createSession();
   };
 
   const handleSwitchSession = (sessionId: string) => {
     switchSession(sessionId);
-    clearMessages();
+  };
+
+  const handleSend = async (query: string) => {
+    // Auto-create session if none active
+    if (!activeSessionId) {
+      const session = await createSession();
+      if (session) {
+        // Small delay to let state settle, then send
+        setTimeout(() => sendMessage(query), 50);
+        return;
+      }
+    }
+    sendMessage(query);
   };
 
   return (
@@ -35,18 +49,25 @@ export function ChatPage() {
         activeSessionId={activeSessionId}
         onNewSession={handleNewSession}
         onSelectSession={handleSwitchSession}
+        onDeleteSession={deleteSession}
       />
 
       <main className="flex flex-1 flex-col min-w-0">
         <div className="flex flex-1 flex-col mx-auto w-full max-w-chat overflow-hidden">
-          <MessageList
-            messages={messages}
-            isLoading={isLoading}
-            error={error}
-            onRetry={retry}
-          />
+          {isLoadingHistory ? (
+            <div className="flex flex-1 items-center justify-center">
+              <Spinner />
+            </div>
+          ) : (
+            <MessageList
+              messages={messages}
+              isLoading={isLoading}
+              error={error}
+              onRetry={retry}
+            />
+          )}
           <div ref={bottomRef} />
-          <ChatInput onSend={sendMessage} disabled={isLoading} />
+          <ChatInput onSend={handleSend} disabled={isLoading || isLoadingHistory} />
         </div>
       </main>
     </div>

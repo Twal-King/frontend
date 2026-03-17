@@ -21,9 +21,12 @@ export function MessageList({ messages, isLoading, error, onRetry }: MessageList
   return (
     <div className="flex flex-col gap-4 flex-1 overflow-y-auto p-6">
       {isEmpty && (
-        <p className="text-secondary text-sm text-center mt-8" role="status">
-          관련 정보를 찾을 수 없습니다
-        </p>
+        <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center">
+          <p className="text-xl font-semibold text-primary">💬</p>
+          <p className="text-secondary text-sm" role="status">
+            새 대화를 시작하거나 질문을 입력하세요
+          </p>
+        </div>
       )}
 
       {sorted.map((msg) => (

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { api } from '../../../utils/api';
-import type { EmbeddingStatus, NotionPage } from '../types';
+import type { DocumentStatus, EmbeddingStatus, NotionPage } from '../types';
+import { toNotionPage, toDocumentStatus } from '../types';
 
 interface UsePagesOptions {
   pageSize?: number;
@@ -19,14 +20,27 @@ export function usePages({ pageSize = 20 }: UsePagesOptions = {}) {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await api.getPages({
-          status: params?.status,
-          search: params?.search,
+        const backendStatus: DocumentStatus | undefined =
+          params?.status ? toDocumentStatus(params.status) : undefined;
+
+        const res = await api.getNotionPages({
+          status: backendStatus,
           page: targetPage,
-          pageSize,
+          limit: pageSize,
         });
-        setPages(res.pages);
-        setTotal(res.total);
+
+        let notionPages = res.data.documents.map(toNotionPage);
+
+        // 클라이언트 사이드 텍스트 검색 (백엔드에 검색 파라미터 없음)
+        if (params?.search?.trim()) {
+          const query = params.search.trim().toLowerCase();
+          notionPages = notionPages.filter((p) =>
+            p.title.toLowerCase().includes(query),
+          );
+        }
+
+        setPages(notionPages);
+        setTotal(res.meta.total);
         setPage(targetPage);
       } catch (e) {
         const msg = e instanceof Error ? e.message : '페이지 목록을 불러올 수 없습니다.';
@@ -40,12 +54,9 @@ export function usePages({ pageSize = 20 }: UsePagesOptions = {}) {
     [page, pageSize],
   );
 
-  const goToPage = useCallback(
-    (newPage: number) => {
-      setPage(newPage);
-    },
-    [],
-  );
+  const goToPage = useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
 
   const updatePageStatus = useCallback(
     (pageId: string, status: EmbeddingStatus) => {

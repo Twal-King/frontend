@@ -74,12 +74,14 @@ src/
 │       │   ├── PageRow.tsx            # 개별 페이지 행
 │       │   ├── BulkActions.tsx        # 일괄 임베딩 액션 바
 │       │   ├── EmbeddingStatusBadge.tsx # 임베딩 상태 뱃지
+│       │   ├── FileUpload.tsx         # 파일 드래그앤드롭 업로드 (PDF, DOCX, TXT, MD)
 │       │   └── Pagination.tsx         # 페이지네이션
 │       ├── hooks/
 │       │   ├── usePages.ts            # 페이지 목록 조회, 페이지네이션
 │       │   ├── useEmbedding.ts        # 개별/일괄 임베딩 요청
 │       │   ├── useBulkSelection.ts    # 체크박스 선택 관리
-│       │   └── usePageFilter.ts       # 상태/텍스트 필터링
+│       │   ├── usePageFilter.ts       # 상태/텍스트 필터링
+│       │   └── useFileUpload.ts       # 파일 업로드 (검증, 업로드, 결과 관리)
 │       └── types.ts                   # EmbeddingStatus, NotionPage, PageFilter, AdminState
 ├── hooks/
 │   └── useApi.ts           # 범용 API 훅 (data, isLoading, error, execute)
@@ -106,6 +108,7 @@ src/
 ### 백오피스 (`/admin`)
 
 - Notion 페이지 목록 조회 및 임베딩 상태 관리
+- 파일 업로드로 문서 임베딩 (드래그앤드롭, PDF/DOCX/TXT/MD, 최대 10개·50MB)
 - 임베딩 상태별 필터링 (대기, 진행 중, 완료, 실패)
 - 페이지 제목 텍스트 검색
 - 개별/일괄 임베딩 생성 요청
@@ -125,14 +128,27 @@ src/
 
 ## API 엔드포인트
 
-프론트엔드가 사용하는 백엔드 API:
+백엔드 OpenAPI 명세 기반 (`/api/v1`):
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| POST | `/api/search` | 자연어 검색 요청 |
-| GET | `/api/sessions` | 대화 세션 목록 조회 |
-| GET | `/api/pages` | Notion 페이지 목록 조회 (필터/페이지네이션) |
-| POST | `/api/embeddings` | 임베딩 생성 요청 |
+| GET | `/api/v1/health` | 서비스 헬스 체크 |
+| GET | `/api/v1/notion/pages` | Notion 연동 문서 목록 (필터/페이지네이션) |
+| POST | `/api/v1/notion/pages` | Notion 페이지 임포트 |
+| GET | `/api/v1/notion/workspace` | Notion 워크스페이스 페이지 목록 |
+| POST | `/api/v1/notion/workspace/sync` | Notion 페이지 일괄 동기화 (최대 20개) |
+| GET | `/api/v1/documents` | 문서 목록 조회 (필터/페이지네이션) |
+| GET | `/api/v1/documents/{id}` | 문서 상세 조회 |
+| DELETE | `/api/v1/documents/{id}` | 문서 삭제 |
+| POST | `/api/v1/documents/{id}/preview` | 문서 분석 미리보기 |
+| POST | `/api/v1/pipeline/{documentId}/run` | 임베딩 파이프라인 실행 |
+| POST | `/api/v1/pipeline/{documentId}/retry` | 실패한 파이프라인 재시도 |
+| GET | `/api/v1/pipeline/{documentId}/jobs` | 파이프라인 작업 이력 |
+| GET | `/api/v1/chunking-config` | 청킹 설정 조회 |
+| PUT | `/api/v1/chunking-config` | 청킹 설정 변경 |
+| GET | `/api/v1/guide` | 임베딩 가이드 정보 |
+
+챗봇 검색 API (`/search`, `/sessions`)는 별도 서비스로 제공 예정.
 
 ## 테스트
 

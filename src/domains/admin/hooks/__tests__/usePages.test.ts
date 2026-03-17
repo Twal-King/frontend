@@ -5,11 +5,36 @@ import { api } from '../../../../utils/api';
 
 vi.mock('../../../../utils/api', () => ({
   api: {
-    getPages: vi.fn(),
+    getNotionPages: vi.fn(),
   },
 }));
 
-const mockGetPages = vi.mocked(api.getPages);
+const mockGetNotionPages = vi.mocked(api.getNotionPages);
+
+// 백엔드 응답 형식으로 mock 데이터 생성
+function makeDocumentDetail(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'doc-1',
+    fileName: 'page.md',
+    fileSize: 1024,
+    mimeType: 'text/markdown',
+    sourceType: 'NOTION' as const,
+    status: 'PENDING' as const,
+    s3Key: null,
+    errorMessage: null,
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    notionSource: {
+      id: 'ns-1',
+      notionPageId: '1',
+      pageTitle: 'Page 1',
+      lastEditedAt: '2024-01-01T00:00:00.000Z',
+      lastSyncedAt: '2024-01-01T00:00:00.000Z',
+    },
+    chunks: [],
+    ...overrides,
+  };
+}
 
 describe('usePages', () => {
   beforeEach(() => {
@@ -26,23 +51,26 @@ describe('usePages', () => {
   });
 
   it('fetches pages successfully', async () => {
-    const mockPages = [
-      { id: '1', title: 'Page 1', embeddingStatus: 'pending' as const, updatedAt: null, notionUrl: 'https://notion.so/1' },
-    ];
-    mockGetPages.mockResolvedValueOnce({ pages: mockPages, total: 1 });
+    mockGetNotionPages.mockResolvedValueOnce({
+      success: true,
+      data: { documents: [makeDocumentDetail()] },
+      meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
 
     const { result } = renderHook(() => usePages());
     await act(async () => {
       await result.current.fetchPages();
     });
 
-    expect(result.current.pages).toEqual(mockPages);
+    expect(result.current.pages).toHaveLength(1);
+    expect(result.current.pages[0].title).toBe('Page 1');
+    expect(result.current.pages[0].embeddingStatus).toBe('pending');
     expect(result.current.total).toBe(1);
     expect(result.current.isLoading).toBe(false);
   });
 
   it('handles fetch error', async () => {
-    mockGetPages.mockRejectedValueOnce(new Error('Network error'));
+    mockGetNotionPages.mockRejectedValueOnce(new Error('Network error'));
 
     const { result } = renderHook(() => usePages());
     await act(async () => {
@@ -55,26 +83,30 @@ describe('usePages', () => {
   });
 
   it('passes filter params to API', async () => {
-    mockGetPages.mockResolvedValueOnce({ pages: [], total: 0 });
+    mockGetNotionPages.mockResolvedValueOnce({
+      success: true,
+      data: { documents: [] },
+      meta: { page: 2, limit: 10, total: 0, totalPages: 0 },
+    });
 
     const { result } = renderHook(() => usePages({ pageSize: 10 }));
     await act(async () => {
       await result.current.fetchPages({ status: 'completed', search: 'test', page: 2 });
     });
 
-    expect(mockGetPages).toHaveBeenCalledWith({
-      status: 'completed',
-      search: 'test',
+    expect(mockGetNotionPages).toHaveBeenCalledWith({
+      status: 'COMPLETED',
       page: 2,
-      pageSize: 10,
+      limit: 10,
     });
   });
 
   it('updates page status locally', async () => {
-    const mockPages = [
-      { id: '1', title: 'Page 1', embeddingStatus: 'pending' as const, updatedAt: null, notionUrl: 'https://notion.so/1' },
-    ];
-    mockGetPages.mockResolvedValueOnce({ pages: mockPages, total: 1 });
+    mockGetNotionPages.mockResolvedValueOnce({
+      success: true,
+      data: { documents: [makeDocumentDetail()] },
+      meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
 
     const { result } = renderHook(() => usePages());
     await act(async () => {
@@ -86,7 +118,11 @@ describe('usePages', () => {
   });
 
   it('calculates totalPages correctly', async () => {
-    mockGetPages.mockResolvedValueOnce({ pages: [], total: 45 });
+    mockGetNotionPages.mockResolvedValueOnce({
+      success: true,
+      data: { documents: [] },
+      meta: { page: 1, limit: 20, total: 45, totalPages: 3 },
+    });
 
     const { result } = renderHook(() => usePages({ pageSize: 20 }));
     await act(async () => {

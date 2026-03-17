@@ -8,10 +8,22 @@ export { PageRow } from './components/PageRow';
 export { PageTable } from './components/PageTable';
 export { Pagination } from './components/Pagination';
 export { BulkActions } from './components/BulkActions';
+export { FileUpload } from './components/FileUpload';
+export { useFileUpload } from './hooks/useFileUpload';
 export { AdminPage } from './components/AdminPage';
 export type {
+  DocumentStatus,
+  SourceType,
+  Document,
+  DocumentDetail,
+  NotionSource,
+  DocumentChunk,
+  PipelineJob,
   EmbeddingStatus,
   NotionPage,
   PageFilter,
   AdminState,
+  WorkspacePage,
+  ChunkingConfig,
 } from './types';
+export { toEmbeddingStatus, toDocumentStatus, toNotionPage } from './types';

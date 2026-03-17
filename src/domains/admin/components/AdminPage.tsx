@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePages } from '../hooks/usePages';
 import { useEmbedding } from '../hooks/useEmbedding';
 import { useBulkSelection } from '../hooks/useBulkSelection';
@@ -7,8 +7,13 @@ import { FilterBar } from './FilterBar';
 import { BulkActions } from './BulkActions';
 import { PageTable } from './PageTable';
 import { Pagination } from './Pagination';
+import { FileUpload } from './FileUpload';
+import { Card } from '../../../components/Card';
+import { Button } from '../../../components/Button';
 
 export function AdminPage() {
+  const [showUpload, setShowUpload] = useState(false);
+
   const {
     pages,
     page,
@@ -30,8 +35,10 @@ export function AdminPage() {
     isAllSelected,
   } = useBulkSelection();
 
+  const getPages = useCallback(() => pages, [pages]);
+
   const { bulkProgress, requestEmbedding, requestBulkEmbedding } =
-    useEmbedding(updatePageStatus);
+    useEmbedding(updatePageStatus, getPages);
 
   useEffect(() => {
     fetchPages();
@@ -80,7 +87,27 @@ export function AdminPage() {
   return (
     <div className="flex flex-1 flex-col min-w-0 p-6">
       <div className="mx-auto w-full max-w-table flex flex-col gap-6">
-        <h1 className="text-xl font-semibold text-primary">임베딩 관리</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-primary">임베딩 관리</h1>
+          <Button
+            variant={showUpload ? 'secondary' : 'primary'}
+            size="sm"
+            onClick={() => setShowUpload((v) => !v)}
+          >
+            {showUpload ? '닫기' : '📄 파일 업로드'}
+          </Button>
+        </div>
+
+        {showUpload && (
+          <Card>
+            <FileUpload
+              onUploadComplete={() => {
+                fetchPages();
+                setShowUpload(false);
+              }}
+            />
+          </Card>
+        )}
 
         <FilterBar
           filter={filter}

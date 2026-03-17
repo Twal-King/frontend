@@ -5,11 +5,25 @@ import { api } from '../../../../utils/api';
 
 vi.mock('../../../../utils/api', () => ({
   api: {
-    requestEmbedding: vi.fn(),
+    runPipeline: vi.fn(),
+    retryPipeline: vi.fn(),
   },
 }));
 
-const mockRequestEmbedding = vi.mocked(api.requestEmbedding);
+const mockRunPipeline = vi.mocked(api.runPipeline);
+const mockRetryPipeline = vi.mocked(api.retryPipeline);
+
+// getPages 헬퍼: pageId → documentId 매핑
+const makeGetPages = (ids: string[]) => () =>
+  ids.map((id) => ({
+    id,
+    title: `Page ${id}`,
+    embeddingStatus: 'pending' as const,
+    updatedAt: null,
+    notionUrl: '',
+    documentId: `doc-${id}`,
+    documentStatus: 'PENDING' as const,
+  }));
 
 describe('useEmbedding', () => {
   beforeEach(() => {
@@ -25,30 +39,36 @@ describe('useEmbedding', () => {
 
   it('requests embedding for single page', async () => {
     const onStatusUpdate = vi.fn();
-    mockRequestEmbedding.mockResolvedValueOnce([
-      { pageId: 'p1', status: 'completed' },
-    ]);
+    mockRunPipeline.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'job-1', documentId: 'doc-p1', status: 'EMBEDDING', chunkCount: null, vectorCount: null, errorMessage: null, createdAt: '', updatedAt: '' },
+      meta: {},
+    });
 
-    const { result } = renderHook(() => useEmbedding(onStatusUpdate));
+    const { result } = renderHook(() =>
+      useEmbedding(onStatusUpdate, makeGetPages(['p1'])),
+    );
     await act(async () => {
       await result.current.requestEmbedding(['p1']);
     });
 
+    expect(mockRunPipeline).toHaveBeenCalledWith('doc-p1');
     expect(onStatusUpdate).toHaveBeenCalledWith('p1', 'processing');
-    expect(onStatusUpdate).toHaveBeenCalledWith('p1', 'completed');
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('handles embedding request failure', async () => {
+  it('handles embedding request failure with retry fallback', async () => {
     const onStatusUpdate = vi.fn();
-    mockRequestEmbedding.mockRejectedValueOnce(new Error('Server error'));
+    mockRunPipeline.mockRejectedValueOnce(new Error('Conflict'));
+    mockRetryPipeline.mockRejectedValueOnce(new Error('Not in FAILED state'));
 
-    const { result } = renderHook(() => useEmbedding(onStatusUpdate));
+    const { result } = renderHook(() =>
+      useEmbedding(onStatusUpdate, makeGetPages(['p1'])),
+    );
     await act(async () => {
       await result.current.requestEmbedding(['p1']);
     });
 
-    expect(result.current.error).toBe('Server error');
     expect(onStatusUpdate).toHaveBeenCalledWith('p1', 'failed');
   });
 
@@ -57,39 +77,53 @@ describe('useEmbedding', () => {
     await act(async () => {
       await result.current.requestEmbedding([]);
     });
-    expect(mockRequestEmbedding).not.toHaveBeenCalled();
+    expect(mockRunPipeline).not.toHaveBeenCalled();
   });
 
   it('requests bulk embedding and tracks progress', async () => {
     const onStatusUpdate = vi.fn();
-    mockRequestEmbedding.mockResolvedValueOnce([
-      { pageId: 'p1', status: 'completed' },
-      { pageId: 'p2', status: 'completed' },
-    ]);
+    const pipelineResponse = (docId: string) => ({
+      success: true as const,
+      data: { id: `job-${docId}`, documentId: docId, status: 'EMBEDDING' as const, chunkCount: null, vectorCount: null, errorMessage: null, createdAt: '', updatedAt: '' },
+      meta: {},
+    });
 
-    const { result } = renderHook(() => useEmbedding(onStatusUpdate));
+    mockRunPipeline
+      .mockResolvedValueOnce(pipelineResponse('doc-p1'))
+      .mockResolvedValueOnce(pipelineResponse('doc-p2'));
+
+    const { result } = renderHook(() =>
+      useEmbedding(onStatusUpdate, makeGetPages(['p1', 'p2'])),
+    );
     await act(async () => {
       await result.current.requestBulkEmbedding(['p1', 'p2']);
     });
 
     expect(onStatusUpdate).toHaveBeenCalledWith('p1', 'processing');
     expect(onStatusUpdate).toHaveBeenCalledWith('p2', 'processing');
-    expect(onStatusUpdate).toHaveBeenCalledWith('p1', 'completed');
-    expect(onStatusUpdate).toHaveBeenCalledWith('p2', 'completed');
     expect(result.current.bulkProgress?.isRunning).toBe(false);
+    expect(result.current.bulkProgress?.completed).toBe(2);
   });
 
-  it('handles bulk embedding failure', async () => {
+  it('handles bulk embedding partial failure', async () => {
     const onStatusUpdate = vi.fn();
-    mockRequestEmbedding.mockRejectedValueOnce(new Error('Bulk failed'));
+    mockRunPipeline.mockRejectedValueOnce(new Error('Fail'));
+    mockRetryPipeline.mockRejectedValueOnce(new Error('Fail'));
+    mockRunPipeline.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'job-2', documentId: 'doc-p2', status: 'EMBEDDING' as const, chunkCount: null, vectorCount: null, errorMessage: null, createdAt: '', updatedAt: '' },
+      meta: {},
+    });
 
-    const { result } = renderHook(() => useEmbedding(onStatusUpdate));
+    const { result } = renderHook(() =>
+      useEmbedding(onStatusUpdate, makeGetPages(['p1', 'p2'])),
+    );
     await act(async () => {
       await result.current.requestBulkEmbedding(['p1', 'p2']);
     });
 
-    expect(result.current.error).toBe('Bulk failed');
     expect(onStatusUpdate).toHaveBeenCalledWith('p1', 'failed');
-    expect(onStatusUpdate).toHaveBeenCalledWith('p2', 'failed');
+    expect(result.current.bulkProgress?.completed).toBe(2);
+    expect(result.current.bulkProgress?.isRunning).toBe(false);
   });
 });

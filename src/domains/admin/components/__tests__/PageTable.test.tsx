@@ -5,8 +5,8 @@ import { PageTable } from '../PageTable';
 import type { NotionPage } from '../../types';
 
 const mockPages: NotionPage[] = [
-  { id: '1', title: 'Page A', embeddingStatus: 'pending', updatedAt: null, notionUrl: 'https://notion.so/1' },
-  { id: '2', title: 'Page B', embeddingStatus: 'completed', updatedAt: new Date().toISOString(), notionUrl: 'https://notion.so/2' },
+  { id: '1', title: 'Page A', embeddingStatus: 'pending', updatedAt: null, notionUrl: 'https://notion.so/1', documentId: 'doc-1', documentStatus: 'PENDING' },
+  { id: '2', title: 'Page B', embeddingStatus: 'completed', updatedAt: new Date().toISOString(), notionUrl: 'https://notion.so/2', documentId: 'doc-2', documentStatus: 'COMPLETED' },
 ];
 
 function renderTable(overrides: Partial<Parameters<typeof PageTable>[0]> = {}) {

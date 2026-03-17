@@ -11,6 +11,8 @@ function renderRow(overrides: Partial<NotionPage> = {}, selected = false) {
     embeddingStatus: 'pending',
     updatedAt: null,
     notionUrl: 'https://notion.so/page-1',
+    documentId: 'doc-1',
+    documentStatus: 'PENDING',
     ...overrides,
   };
   const onToggle = vi.fn();

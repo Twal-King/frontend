@@ -9,6 +9,8 @@ const makePage = (overrides: Partial<NotionPage> = {}): NotionPage => ({
   embeddingStatus: 'pending',
   updatedAt: null,
   notionUrl: 'https://notion.so/p1',
+  documentId: 'doc-p1',
+  documentStatus: 'PENDING',
   ...overrides,
 });
 

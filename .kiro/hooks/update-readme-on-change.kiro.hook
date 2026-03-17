@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "name": "README 자동 업데이트",
+  "description": "src/ 디렉토리 내 소스 코드 파일이 수정될 때, README.md를 프로젝트 최신 상태에 맞게 업데이트합니다. 새로운 컴포넌트, 훅, 유틸리티, 라우트, API 엔드포인트 등의 변경사항을 반영합니다.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "에이전트 작업이 완료되었습니다. 방금 수행한 작업에서 src/ 디렉토리 내 소스 코드 파일(컴포넌트, 훅, 유틸리티, 라우트, 타입 등)이 추가, 수정, 삭제되었는지 확인하세요. 변경이 있었다면 README.md를 프로젝트 최신 상태에 맞게 업데이트하세요. 프로젝트 구조, 주요 기능, 디자인 시스템, API 엔드포인트, 테스트 등의 섹션을 변경사항에 맞게 반영하세요. 변경이 없었다면 아무것도 하지 마세요."
+  },
+  "workspaceFolderName": "frontend",
+  "shortName": "update-readme-on-change"
+}
